@@ -1,16 +1,23 @@
 <script setup lang="ts">
+const img = useImg()
 const { data: content } = await useContent()
 const { m } = useLang()
 const s = computed(() => m.value.services)
-usePageSeo(s.value.seoTitle, s.value.sub, '/img/baobabs.jpg')
+usePageSeo(s.value.seoTitle, s.value.sub)
+const numbered = computed(() => numberedServices(content.value.services))
+const apart = computed(() => apartService(content.value.services))
 </script>
 
 <template>
-  <PageHero :label="s.label" :title="s.title" :sub="s.sub" :image="photos.chauffeur" />
+  <PageHero :label="s.label" :title="s.title" :sub="s.sub" :image="img('services.hero')" />
 
-  <section class="ts-sec ts-black" style="padding-top:clamp(40px,6vw,90px)">
-    <div class="ts-wrap"><ServiceMosaic :services="content.services" /></div>
+  <section class="ts-sec ts-black ts-sblocks" style="padding-top:clamp(40px,6vw,90px)">
+    <div class="ts-wrap">
+      <ServiceBlock v-for="(sv, i) in numbered" :key="sv.id" :service="sv" :n="i + 1" :flip="i % 2 === 1" />
+    </div>
   </section>
+
+  <ConciergeBand v-if="apart" :service="apart" />
 
   <section class="ts-sec ts-light">
     <div class="ts-wrap">
@@ -24,5 +31,5 @@ usePageSeo(s.value.seoTitle, s.value.sub, '/img/baobabs.jpg')
     </div>
   </section>
 
-  <FinalCta :line1="s.finalTitle" :image="photos.night" />
+  <FinalCta :line1="s.finalTitle" :image="img('services.final')" />
 </template>

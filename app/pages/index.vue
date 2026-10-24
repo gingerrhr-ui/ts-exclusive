@@ -1,9 +1,10 @@
 <script setup lang="ts">
+const img = useImg()
 const { data: settings } = await useSettings()
 const { data: content } = await useContent()
 const { m, lp } = useLang()
 const h = computed(() => m.value.home)
-usePageSeo(h.value.seoTitle, h.value.seoDesc, '/img/baobabs.jpg')
+usePageSeo(h.value.seoTitle, h.value.seoDesc)
 
 // Chiffres issus des données réelles (flotte, offres)
 const stats = computed(() => {
@@ -17,9 +18,8 @@ const stats = computed(() => {
     { v: from >= 1000 ? Math.round(from / 1000) + 'K' : String(from), l: l[3] }
   ].filter(x => x.v && x.v !== '0')
 })
-// Numéros des tuiles : ils continuent après les services (ex : 6 services, flotte 07, à propos 08)
-const nFleet = computed(() => content.value.services.length + 1)
-const nAbout = computed(() => content.value.services.length + 2)
+// Le service « à part » (conciergerie) a son propre bloc, sans numéro
+const apart = computed(() => apartService(content.value.services))
 const tel = computed(() => 'tel:' + String(settings.value.phone || '').replace(/[^+\d]/g, ''))
 
 useHead({
@@ -36,7 +36,7 @@ useHead({
 
 <template>
   <section class="ts-hero">
-    <div class="bg"><img v-parallax="0.08" :src="photos.hero" alt="TS EXCLUSIVE executive vehicle" fetchpriority="high"></div>
+    <div class="bg"><img v-parallax="0.08" :src="img('home.hero')" :alt="m.common.heroAlt" fetchpriority="high"></div>
     <div class="tint" aria-hidden="true" />
     <div class="spot" aria-hidden="true" />
     <div class="ts-wrap in">
@@ -47,16 +47,18 @@ useHead({
           <a class="ts-btn" :href="waLink(settings.whatsapp)" target="_blank" rel="noopener">WhatsApp</a>
         </div>
       </div>
-      <NuxtLink :to="lp('/tarifs')" class="offer"><span>{{ h.viewOffer }}</span><i class="ar" /></NuxtLink>
     </div>
-    <p class="lead">{{ h.lead }}</p>
+    <NuxtLink :to="lp('/tarifs')" class="offer"><span class="t">{{ h.viewOffer }}</span><i class="ar" /></NuxtLink>
     <div class="ts-wrap ts-hstats">
       <div v-for="x in stats" :key="x.l" class="st"><b v-count>{{ x.v }}</b><span>{{ x.l }}</span></div>
     </div>
   </section>
 
   <section class="ts-pillars">
-    <div class="ts-wrap grid5">
+    <div class="ts-wrap">
+      <p v-reveal class="lead">{{ h.lead }}</p>
+    </div>
+    <div class="ts-wrap grid3">
       <div v-for="(p, i) in h.pillars" :key="p.t" v-reveal="i * 0.08" class="it">
         <Icon :name="p.icon" :size="30" />
         <h4>{{ p.t }}</h4>
@@ -74,18 +76,19 @@ useHead({
     </div>
   </section>
 
+  <ConciergeBand v-if="apart" :service="apart" />
+
   <section class="ts-sec ts-light ts-cloud">
     <div class="ts-wrap">
       <div v-reveal class="ts-rule2"><i /><span>{{ h.blockLabel }}</span><i /></div>
       <div class="ts-duo">
-        <FleetTile :vehicles="content.vehicles" :n="nFleet" />
+        <FleetTile :vehicles="content.vehicles" />
         <div class="stack">
-          <NuxtLink v-reveal="0.1" :to="lp('/a-propos')" class="ts-tile about" data-cursor-label="Voir">
-            <span class="num">{{ String(nAbout).padStart(2, '0') }}</span>
-            <div class="bgimg"><img :src="sized(photos.chauffeur, 900)" alt="" loading="lazy" decoding="async"></div>
+          <NuxtLink v-reveal="0.1" :to="lp('/a-propos')" class="ts-tile about" :data-cursor-label="m.common.view">
+            <div class="bgimg"><img :src="img('home.about', 900)" alt="" loading="lazy" decoding="async"></div>
             <div class="txt">
               <h3>{{ h.aboutName }}</h3>
-              <p>{{ h.introText }}</p>
+              <p>{{ h.aboutText }}</p>
               <span class="go">{{ h.more }} <span class="ts-arr" /></span>
             </div>
           </NuxtLink>
@@ -113,37 +116,24 @@ useHead({
         <span v-reveal class="ts-label">{{ h.expLabel }}</span>
         <h2 v-reveal="0.1" class="ts-title">{{ h.expTitle }}</h2>
         <div v-reveal="0.2" class="ts-board" aria-hidden="true">
-          <img src="/img/logo.svg" alt="" width="130" height="30">
+          <img :src="img('logo.light')" alt="" width="167" height="30">
           <b>Tonga soa</b>
           <span>{{ h.board }}</span>
         </div>
       </div>
       <div class="ts-path" data-progress>
         <div v-for="x in h.exp" :key="x[0]" v-reveal class="ts-step">
-          <span class="tag">{{ x[0] }}</span>
-          <h3>{{ x[1] }}</h3>
-          <p>{{ x[2] }}</p>
+          <h3>{{ x[0] }}</h3>
+          <p>{{ x[1] }}</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="ts-sec ts-black">
-    <div class="ts-wrap">
-      <div class="ts-gap" style="margin-bottom:clamp(36px,5vw,70px)">
-        <span v-reveal class="ts-label">{{ h.whyLabel }}</span>
-        <h2 v-reveal="0.1" class="ts-title">{{ h.whyTitle }}</h2>
-      </div>
-      <ul class="ts-list">
-        <li v-for="(w, i) in h.why" :key="w[0]" v-reveal="i * 0.06"><span>{{ w[1] }}</span><small>{{ w[2] }}</small></li>
-      </ul>
-    </div>
-  </section>
-
-  <section v-if="content.partners.length" class="ts-sec ts-light ts-cloud" style="padding-block:clamp(64px,8vw,120px)">
+  <section v-if="content.partners.length" class="ts-sec ts-black" style="padding-block:clamp(64px,8vw,120px)">
     <div class="ts-wrap">
       <div v-reveal class="ts-rule2"><i /><span>{{ h.trustLabel }}</span><i /></div>
-      <div v-reveal="0.1" class="ts-marquee" style="margin-top:34px" aria-label="partners"><div class="track"><span v-for="(p, i) in [...content.partners, ...content.partners]" :key="i">{{ p.name }}</span></div></div>
+      <div v-reveal="0.1" class="ts-marquee ts-marquee-dark" style="margin-top:34px" :aria-label="m.common.partnersAria"><div class="track"><span v-for="(p, i) in [...content.partners, ...content.partners]" :key="i">{{ p.name }}</span></div></div>
     </div>
   </section>
 
@@ -174,5 +164,5 @@ useHead({
     </div>
   </section>
 
-  <FinalCta :line1="h.finalTitle1" :line2="h.finalTitle2" :image="photos.night" :primary="h.quote" />
+  <FinalCta :line1="h.finalTitle1" :line2="h.finalTitle2" :image="img('home.final')" :primary="h.quote" />
 </template>
